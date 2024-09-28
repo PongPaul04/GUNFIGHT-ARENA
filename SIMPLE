@@ -154,7 +154,7 @@ Players.PlayerAdded:Connect(onPlayerAdded)
 --
 local Section = AimTab:CreateSection("aimb")
 
--- Function to aim at the closest player in FOV
+-- Function to get the closest player to the mouse pointer within the FOV circle
 local function getClosestPlayerInFOV()
     local closestPlayer = nil
     local closestDistance = math.huge
@@ -165,11 +165,11 @@ local function getClosestPlayerInFOV()
             local headPosition = player.Character.Head.Position
             local viewportPoint = Camera:WorldToViewportPoint(headPosition)
             local distanceFromMouse = (Vector2.new(viewportPoint.X, viewportPoint.Y) - Vector2.new(mouseLocation.X, mouseLocation.Y)).Magnitude
-            
+
+            -- Only consider players inside the FOV circle
             if distanceFromMouse < FOV / 2 and viewportPoint.Z > 0 then
-                local distance = (Camera.CFrame.Position - headPosition).Magnitude
-                if distance < closestDistance then
-                    closestDistance = distance
+                if distanceFromMouse < closestDistance then
+                    closestDistance = distanceFromMouse
                     closestPlayer = player
                 end
             end
@@ -184,12 +184,13 @@ RunService.RenderStepped:Connect(function()
     fovCircle.Position = Vector2.new(mousePos.X, mousePos.Y)
 end)
 
+
 -- Aimbot functionality
 local function aimAtPlayer(player)
     if player and player.Character and player.Character:FindFirstChild("Head") then
-        -- Check if the player is on the same team
+        -- Check if the player is on the same team (if TeamCheckEnabled is true)
         if TeamCheckEnabled and player.Team == LocalPlayer.Team then
-            return  -- Do not aim at teammates
+            return  -- Don't aim at teammates
         end
 
         local headPosition = player.Character.Head.Position
@@ -217,9 +218,10 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
+-- Continuously update the aimbot and aim at the closest player
 RunService.RenderStepped:Connect(function()
     if AimbotActive then
-        LockedPlayer = getClosestPlayerInFOV()  -- Continuously update LockedPlayer
+        LockedPlayer = getClosestPlayerInFOV()  -- Find the closest player to the mouse pointer within the FOV circle
         if LockedPlayer then
             aimAtPlayer(LockedPlayer)  -- Aim at the locked player
         end
@@ -317,6 +319,29 @@ local Toggle = AimTab:CreateToggle({
     end,
 })
 
+-- Slider to change FOV circle size
+local Slider = AimTab:CreateSlider({
+   Name = "FOV CIRCLE",
+   Range = {0, 300}, -- Adjusted range for a more useful FOV size
+   Increment = 2,
+   Suffix = "SIZE",
+   CurrentValue = FOV / 2, -- Start with the initial FOV radius
+   Flag = "Slider1",
+   Callback = function(Value)
+       FOV = Value * 2 -- Since FOV is twice the radius, we multiply by 2
+       fovCircle.Radius = FOV / 2
+   end,
+})
+
+-- Color picker to change FOV circle color
+local ColorPicker = AimTab:CreateColorPicker({
+    Name = "Color FOV",
+    Color = FOVCircleColor,
+    Flag = "ColorPicker1",
+    Callback = function(Value)
+        fovCircle.Color = Value -- Update the FOV circle's color
+    end
+})
 
 local Button = SetTab:CreateButton({
 	Name = "Destroy UI",
